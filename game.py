@@ -16,9 +16,11 @@ class Player(pygame.sprite.Sprite):
         self.rect = self.image.get_rect(midbottom = (960,840))
         self.frame_counter = 0
         self.animation_offset = 0
+        
+        # Schiesen
         self.last_shot_time = 0   
         self.shoot_cooldown = 750
-    
+
     def player_movement(self):
         speed = 12
         dx = 0
@@ -47,7 +49,7 @@ class Player(pygame.sprite.Sprite):
         if pygame.mouse.get_pressed()[0] or pygame.key.get_pressed()[pygame.K_SPACE]:
             if current_time - self.last_shot_time >= self.shoot_cooldown:
                 self.last_shot_time = current_time
-                new_shot = Player_Shot(self.rect.centerx, self.rect.centery)
+                new_shot = Player_Shot(self.rect.center)
                 player_shots.add(new_shot)
     #damit bei cutscene skips nicht geschssen wird
     def reset_shoot(self):
@@ -72,15 +74,45 @@ class Player(pygame.sprite.Sprite):
         self.player_movement()
         self.shoot()
 
+class Fuel():
+    def __init__(self):
+        self.max_fuel = 100       
+        self.fuel = 100           
+        self.fuel_consumption = 0.1
+        self.consumed_fuel = 0
+    def update(self):
+        self.fuel -= self.fuel_consumption
+        self.consumed_fuel = self.max_fuel - self.fuel
+        if self.fuel <= 0:
+            game.state = 'game_over'
+
+    def draw_fuel(self,screen):
+        pygame.draw.rect(screen, (50, 50, 50), (80, 400, 30, 600))
+        bar_color = (255, 0, 0) if self.fuel < 30 else (0, 255, 0) #rot wenn benzinstand niedrig
+        pygame.draw.rect(screen, bar_color, (80, 400 + self.consumed_fuel * 6, 30,600 - int(self.consumed_fuel * 6))) #int da sonst lästiger 1 Pixel grauer streifen
+
+class JerryCan(pygame.sprite.Sprite):
+    def __init__(self,pos):
+        super().__init__()
+        self.jerrycan = pygame.image.load('graphics/assets/BenzinKanister.png')
+        self.image = self.jerrycan
+        self.rect = self.image.get_rect(center = pos)
+    def update(self):
+        self.rect.y += 5            #Fallspeed
+        if self.rect.top > screen_height + 100:
+            self.kill()
+
+
+                                        
+
 class Player_Shot(pygame.sprite.Sprite):
-    def __init__(self,x,y):
+    def __init__(self,pos):
         super().__init__()
         self.shot = pygame.image.load('graphics/player/shot.png')
         self.image = self.shot
-        self.rect = self.image.get_rect(midbottom = (x,y))
+        self.rect = self.image.get_rect(midbottom = pos) 
     def update(self):
-        shot_speed = 16
-        self.rect.y -= shot_speed
+        self.rect.y -= 16              #Shotspeed
         if self.rect.bottom < -40:
             self.kill()
 
@@ -93,9 +125,9 @@ class Milky_Sphere(pygame.sprite.Sprite):
         self.rect = self.image.get_rect(center = (960,200))
 
 class Planet_Storm(pygame.sprite.Sprite):
-    def __init__(self,type,lane_x):
+    def __init__(self,type,):
         super().__init__()
-        self.speed = 10  
+        self.speed = 5  
         self.type = type        # genereller Speed um Spiel einfacher zu balancen 
         
         if type == 'Mars':
@@ -107,14 +139,14 @@ class Planet_Storm(pygame.sprite.Sprite):
             self.speed = self.speed * 1
             self.health = 3
         if type == 'Pluto':
-            self.image = pygame.image.load('graphics/planets/Pluto.png').convert_alpha()
+            self.image = pygame.transform.scale_by(pygame.image.load('graphics/planets/Pluto.png').convert_alpha(),0.2)
             self.speed = self.speed * 1.4    
             self.health = 1                                               #Pluto soll schnell aber leicht zerstöbar sein
         if type == 'DeathStar': 
             self.image = pygame.image.load('graphics/planets/DeathStar.png').convert_alpha()
-            self.speed = self.speed * 0.8
+            self.speed = self.speed * 0.2
             self.health = 6
-        self.rect = self.image.get_rect(center = (lane_x, 0))
+        self.rect = self.image.get_rect(bottomleft = (randint(100,screen_widht - 420), -200))   #Platz an den Rändern für Benzin anzeige
         
     def destroy(self):
         if self.rect.y >= screen_height + 300 :
@@ -124,14 +156,26 @@ class Planet_Storm(pygame.sprite.Sprite):
         self.rect.y += self.speed
         self.destroy()
 
+
+# Collisionen
 def collisions_shot():
     hits = pygame.sprite.groupcollide(planets, player_shots, False, True)
     
     for planet in hits:
-        if planet.type != 'DeathStar':          #Todes Stern soll unzerstörbar sein
-            planet.health -= len(hits[planet])  #potentiell kan ein planet von mehreren schüssen getroffen werden sollte aber eigentlich nich vorkommen
+        planet.health -= len(hits[planet])  #potentiell kan ein planet von mehreren schüssen getroffen werden sollte aber eigentlich nicht vorkommen können 
         if planet.health <= 0:
-            planet.kill()    
+            spawn_chance = 15 + (fuel.consumed_fuel * 0.7)   #gößere Chance bei niedrigem Benzin stand mehr Spielspannung
+            if randint(0,100) <= spawn_chance:
+                jerrycans.add(JerryCan(planet.rect.center))
+            planet.kill()
+
+def pickup_jerry():
+    if pygame.sprite.spritecollide(player.sprite, jerrycans, True):
+        fuel.fuel += 40
+        if fuel.fuel >= fuel.max_fuel:
+            fuel.fuel = fuel.max_fuel    #fuel nicht über max
+                     
+
       
         
         
@@ -164,14 +208,15 @@ class GameState():
         
          
     def stage_1(self,events):
-        current_time = pygame.time.get_ticks()
-        for lane in self.lanes:
-            if current_time > self.lane_cooldowns[lane]:
-                planets.add(Planet_Storm(choice(['Mars', 'Saturn', 'Pluto', 'DeathStar']), lane))
-                self.lane_cooldowns[lane] = current_time + randint(1000, 3000)
-            
+        for event in events:           
+            if event.type == planet_timer:
+                planets.add(Planet_Storm(choice(['Mars','Saturn','Pluto','DeathStar'])))    
+                pygame.time.set_timer(planet_timer,randint(1500,4000))
+        #collisions    
         collisions_shot()    
+        pickup_jerry()
 
+        #sprites und co
         screen.fill('lightblue')
         screen.blit(ground, (0,300))
         player.sprite.draw_custom()
@@ -181,9 +226,13 @@ class GameState():
         player_shots.update()
         planets.draw(screen)
         planets.update()
-
+        fuel.update()
+        fuel.draw_fuel(screen)
+        jerrycans.draw(screen)
+        jerrycans.update()
     def game_over(self):
         planets.empty()
+        fuel.fuel = fuel.max_fuel
         self.state = 'intro'
 
     def state_manager(self,events):
@@ -203,7 +252,7 @@ ground = pygame.image.load('graphics/background/ground.png')
 #Startups
 pygame.init()
 clock = pygame.time.Clock()
-
+fuel = Fuel()
 screen_widht = 1920
 screen_height = 1080
 cut_scene = None
@@ -222,6 +271,12 @@ cow = pygame.sprite.GroupSingle()
 cow.add(Milky_Sphere())
 player_shots = pygame.sprite.Group()
 planets = pygame.sprite.Group()
+jerrycans = pygame.sprite.Group()
+
+#Timer
+planet_timer = pygame.USEREVENT + 1
+pygame.time.set_timer(planet_timer,1000)
+
 #Game Loop
 while True:
     events = pygame.event.get()

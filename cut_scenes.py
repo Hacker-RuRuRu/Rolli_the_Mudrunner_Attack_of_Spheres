@@ -40,7 +40,8 @@ class CutScene1:
             3 : "????: MUUHHH...MUUHH!!!! Muhh",
             4 : "Tanslatesystem activated",
             5 : "Cow : HOW DARE YOU CALL ME SPHERE?! IM CLEARLY A COW!!!",
-            6 : "Cow : Im going to beat some Manners into your pattern recognizing brain!"
+            6 : "Cow : Im going to beat some Manners into your pattern recognizing brain!",
+            7 : "Roli: I cant let any of these Planets hit my Students!"     #Vorstellen es wird auf dem Beamer gespielt und Roli verdeidigt den Hörsaal 
         }
         self.skip_timer = 0
         self.screen = screen
