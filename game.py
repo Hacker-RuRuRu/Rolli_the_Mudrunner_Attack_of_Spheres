@@ -2,7 +2,7 @@ import pygame
 from sys import exit
 import os
 import cut_scenes as ct
-from random import randint, choices
+from random import randint, choices, choice
 #Spiel aus jedem directory sauber Startbar ;)
 os.chdir(os.path.dirname(__file__))
 
@@ -24,17 +24,37 @@ class Player(pygame.sprite.Sprite):
         # Schiesen
         self.last_shot_time = 0   
         self.shoot_cooldown = 500
-
+        self.pew_sound = pygame.mixer.Sound('audio/pew.mp3')
+        self.pew_sound.set_volume(0.1)
+        self.pew = [self.pew_sound,self.pew_sound,self.pew_sound] #falls ich dazu komme unterschiedlich pitche für abwechslung zu erstellen
+        #Fahren
+        self.gas_sound = pygame.mixer.Sound('audio/engine_gas.mp3')
+        self.idle_sound = pygame.mixer.Sound('audio/engine_idle.mp3')
+        self.engine_channel = pygame.mixer.Channel(0) #channel damit beim gas geben sounds direkt wechseln wrumm wrumm
+        self.engine_channel.play(self.idle_sound,-1)
+        self.engine_channel.set_volume(0.1)
+        self.current_engine_state = 'idle' #state damit sounds nicht permanet neustarten
     def player_movement(self):
         speed = 15                     #einfaches anpassen
         dx = 0
         dy = 0
         keys = pygame.key.get_pressed()
 
-        if keys[pygame.K_w]: dy -= 1
+        if keys[pygame.K_w]: dy -= 1   
         if keys[pygame.K_s]: dy += 1
         if keys[pygame.K_d]: dx += 1
         if keys[pygame.K_a]: dx -= 1
+
+        if dx != 0 or dy != 0 and not (dy > 0 and dx == 0):
+            if self.current_engine_state != 'gas':
+                self.engine_channel.play(self.gas_sound, loops=-1 , fade_ms= 200)
+                self.engine_channel.set_volume(0.1)
+                self.current_engine_state = 'gas'       #beste möglichkeit ansonsten noch komplexeres channel System damit gas sound nicht immer abhackt
+        elif self.current_engine_state != 'idle':       #und bei längerem idle trotzdem auch wieder von vorne startet 
+            self.engine_channel.play(self.idle_sound, loops=-1, fade_ms= 200)
+            self.engine_channel.set_volume(0.1) 
+            self.current_engine_state = 'idle'
+       
         #Diagonal Fix 
         if dy != 0 and dx != 0:
             dx *= 0.71
@@ -75,6 +95,7 @@ class Player(pygame.sprite.Sprite):
                 self.last_shot_time = current_time
                 new_shot = Player_Shot(self.rect.center)
                 player_shots.add(new_shot)
+                choice(self.pew).play()
     #damit bei cutscene skips nicht geschssen wird
     def reset_shoot(self):
         self.last_shot_time = pygame.time.get_ticks()
@@ -152,6 +173,13 @@ class Milky_Sphere(pygame.sprite.Sprite):
         self.milky_sphere = pygame.image.load('graphics/cow/milky_sphere.png').convert_alpha()
         self.image = self.milky_sphere
         self.rect = self.image.get_rect(center = (960,200))
+        self.muh = pygame.mixer.Sound('audio/Muh.mp3')
+        self.muh.set_volume(0.3)
+    def auch_einfach_mal_muh_machen(self,boolean = False):    
+        if randint(0,10000) == randint(0,10000) or boolean:   #doppel randint genau so nötig wie die function ;) 
+            self.muh.play()
+    def update(self):
+        self.auch_einfach_mal_muh_machen() 
 
 class Planet_Storm(pygame.sprite.Sprite):
     def __init__(self,type,):
@@ -160,15 +188,15 @@ class Planet_Storm(pygame.sprite.Sprite):
         self.type = type        # genereller Speed um Spiel einfacher zu balancen 
         
         if type == 'Mars':
-            self.image = pygame.image.load('graphics/planets/Mars.png').convert_alpha()
+            self.image = pygame.transform.scale_by(pygame.image.load('graphics/planets/Mars.png').convert_alpha(),0.5)
             self.speed = self.speed * 1
             self.health = 2
         if type == 'Saturn':
-            self.image = pygame.image.load('graphics/planets/Saturn.png').convert_alpha()
+            self.image = pygame.transform.scale_by(pygame.image.load('graphics/planets/Saturn.png').convert_alpha(),0.7)
             self.speed = self.speed * 1
             self.health = 2
         if type == 'Pluto':
-            self.image = pygame.transform.scale_by(pygame.image.load('graphics/planets/Pluto.png').convert_alpha(),0.2)
+            self.image = pygame.transform.scale_by(pygame.image.load('graphics/planets/Pluto.png').convert_alpha(),0.3)
             self.speed = self.speed * 1.4    
             self.health = 1                                               #Pluto soll schnell aber leicht zerstöbar sein
         if type == 'DeathStar': 
@@ -206,11 +234,7 @@ def pickup_jerry():
         fuel.fuel += 20
         if fuel.fuel >= fuel.max_fuel:
             fuel.fuel = fuel.max_fuel    #fuel nicht über max
-                     
-
-      
-        
-        
+                          
 #Game Managing Klassen  
 class ProgressBar:
     def __init__(self, duration, name, next_state):
@@ -226,7 +250,7 @@ class ProgressBar:
             self.progress = self.current_time / self.end_time
         else:
             self.progress = 1.0
-            game.state = self.next_state 
+            return True
 
     def draw(self, screen):
         width = 30                          #Diesmal mit Parametern damit einfacher anpassbar        
@@ -246,7 +270,9 @@ class GameState():
     def intro(self,events): 
         for event in events:           
             if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
+                player.sprite.reset_shoot()
                 self.progressbar = ProgressBar(120,'Stage 1','End')   #durch self im scope des gesamten GameState
+                pygame.mixer_music.play(-1)
                 self.state = 'stage_1' 
         #Start screen mit controls  
         screen.fill('lightblue')
@@ -277,10 +303,12 @@ class GameState():
         #Background
         screen.fill('lightblue')
         screen.blit(ground, (0,300))
+        
         #sprites und co
         player.sprite.draw_custom()
         player.update()        
         cow.draw(screen)
+        cow.update()
         player_shots.draw(screen)
         player_shots.update()
         planets.draw(screen)
@@ -292,12 +320,17 @@ class GameState():
         #Gui
         fuel.update()
         fuel.draw_fuel(screen)
-        self.progressbar.update(self.dt)
         self.progressbar.draw(screen)
+
+        if self.progressbar.update(self.dt):
+            self.state = 'End'
+            pygame.mixer_music.fadeout(1500) #damit am ende nicht die ganze zeit music weiter leuft 
+            cow.sprite.auch_einfach_mal_muh_machen(True) #Das wichtigste am Ende muss gemuht werden ^-^
     def game_over(self):
         planets.empty()
         fuel.fuel = fuel.max_fuel                           #Player resets
-        player.sprite.health = player.sprite.max_health   
+        player.sprite.health = player.sprite.max_health
+        pygame.mixer_music.fadeout(1500)   
         self.state = 'intro'
 
     def end(self):
@@ -336,6 +369,9 @@ screen_widht = 1920
 screen_height = 1080
 cut_scene = None
 last_fps_print_time = 0
+pygame.mixer_music.load('audio/background_music.mp3')  #mixer_music damit nicht volll in arbeitsspeicher geladen wird
+pygame.mixer_music.set_volume(0.1)
+
 #Font
 font50 = pygame.font.SysFont(None,50)
 font100 = pygame.font.SysFont(None,100)
