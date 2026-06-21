@@ -21,7 +21,7 @@ Das Spiel benötigt Python 3 und Pygame.
 
 ## Story 
 Roli ist in seinem Mudrunner unterwegs als die Sensoren Alarm schlagen. Aus den Daten liest er ein approximativ sphärisches milch gefülltes Objekt
-ist in der Nähe. Die Kuh garnicht darüber erfreut als eine Kugel bezeichnet zu werden erklärt Roli den Kampf. Phase 1 des Kampes beginnt und die Kuh 
+ist in der Nähe. Die Kuh, garnicht darüber erfreut als eine Kugel bezeichnet zu werden, erklärt Roli den Kampf. Phase 1 des Kampes beginnt und die Kuh 
 beschwört einen Planeten Sturm der droht auf die Studenten herab zu fallen. Gelingt es Roli den Hörsaal zu beschützen?
 
 ## Lizenz & Credits

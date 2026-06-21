@@ -461,7 +461,7 @@ class GameState():
         breacktrough_surf = font50.render('The Lecture Hall was crushed by Planets',True,'black')
         breacktrough_rect = breacktrough_surf.get_rect(center = (screen_widht/2,200))
         screen.blit(breacktrough_surf,breacktrough_rect)
-        breacktrough_tip_surf = pygame.font.SysFont(None,20).render('Just so you know: Roli seems not to care, if his Car gets Hit by a Planet',True,'black')
+        breacktrough_tip_surf = pygame.font.SysFont(None,50).render('Just so you know: Roli seems not to care, if his Car gets Hit by a Planet',True,'black')
         breacktrough_tip_rect = breacktrough_tip_surf.get_rect(center = (screen_widht/2,500))
         screen.blit(breacktrough_tip_surf,breacktrough_tip_rect)
         restart_surf = font70.render('Press |SPACE| to return to Menu',True,50)
