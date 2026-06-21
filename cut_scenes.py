@@ -1,12 +1,19 @@
+
+
+#Hier liegen die Treume meines versuchs einen Cutscenesmanagers so bauen
+#damals war ich noch nicht sehr geübt im umgang mit der Gameloop und wie man mit ihr Zeit und updates verwaltet :(
+
+
+
 import pygame
 
-def animate_text(screen, text, size , color, x, y, font_path, start_time):
+def animate_text(screen, text, size , color, x, y, font_path, start_time):      
     
     font = pygame.font.Font(font_path, size)
     
     char_timer = pygame.time.get_ticks() - start_time
     chars_to_show = int(char_timer // 50)
-    
+                                                        #text erscheint wie getippt auf bildschirm
     animated_text = text[0:chars_to_show] 
 
     text_surface = font.render(animated_text, True, color)
@@ -21,7 +28,7 @@ def animate_box(screen,side,box_y,character_surf=None):
     master_surface = pygame.Surface((screen.get_width(), 400))
     master_surface.fill((0,0,0))
     if character_surf is not None:
-        master_surface.blit(character_surf,(screen.get_width()//8, 200))
+        master_surface.blit(character_surf,(screen.get_width()//8, 200))  #sprech boxen am oberen und unterem bildschirm rand + Icon einblendung
     master_rect = master_surface.get_rect(bottomleft = (0,0))
     if side == "top":
         
