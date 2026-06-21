@@ -458,7 +458,7 @@ class GameState():
             if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
                 self.state = 'intro'
         screen.fill('lightblue')        
-        breacktrough_surf = font50.render('The Lecturehall was crushed by Planets',True,'black')
+        breacktrough_surf = font50.render('The Lecture Hall was crushed by Planets',True,'black')
         breacktrough_rect = breacktrough_surf.get_rect(center = (screen_widht/2,200))
         screen.blit(breacktrough_surf,breacktrough_rect)
         breacktrough_tip_surf = pygame.font.SysFont(None,20).render('Just so you know: Roli seems not to care, if his Car gets Hit by a Planet',True,'black')
